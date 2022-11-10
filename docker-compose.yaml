@@ -1,0 +1,208 @@
+---
+version: '2'
+services:
+  zookeeper-1:
+    image: bitnami/zookeeper:3.6.3
+    hostname: zookeeper-1
+    container_name: zookeeper-1
+    environment:
+      ZOO_SERVER_ID: 1
+      ZOO_ENABLE_AUTH: yes
+      ZOO_SERVER_USERS: admin
+      ZOO_SERVER_PASSWORDS: adminadmin
+      ZOO_CLIENT_USER: admin
+      ZOO_CLIENT_PASSWORD: adminadmin
+      ZOOMAIN: "org.apache.zookeeper.server.quorum.QuorumPeerMain"
+      ZOO_SERVERS: zookeeper-1:2888:3888,zookeeper-2:2888:3888,zookeeper-3:2888:3888
+
+  zookeeper-2:
+    image: bitnami/zookeeper:3.6.3
+    hostname: zookeeper-2
+    container_name: zookeeper-2
+    environment:
+      ZOO_SERVER_ID: 2
+      ZOO_ENABLE_AUTH: yes
+      ZOO_SERVER_USERS: admin
+      ZOO_SERVER_PASSWORDS: adminadmin
+      ZOO_CLIENT_USER: admin
+      ZOO_CLIENT_PASSWORD: adminadmin
+      ZOOMAIN: "org.apache.zookeeper.server.quorum.QuorumPeerMain"
+      ZOO_SERVERS: zookeeper-1:2888:3888,zookeeper-2:2888:3888,zookeeper-3:2888:3888
+
+  zookeeper-3:
+    image: bitnami/zookeeper:3.6.3
+    hostname: zookeeper-3
+    container_name: zookeeper-3
+    environment:
+      ZOO_SERVER_ID: 3
+      ZOO_ENABLE_AUTH: yes
+      ZOO_SERVER_USERS: admin
+      ZOO_SERVER_PASSWORDS: adminadmin
+      ZOO_CLIENT_USER: admin
+      ZOO_CLIENT_PASSWORD: adminadmin
+      ZOOMAIN: "org.apache.zookeeper.server.quorum.QuorumPeerMain"
+      ZOO_SERVERS: zookeeper-1:2888:3888,zookeeper-2:2888:3888,zookeeper-3:2888:3888
+
+  kafka-users:
+    image: bitnami/kafka:2.8.0
+    container_name: "kafka-users"
+    restart: "on-failure"
+    entrypoint: 
+    - "/bin/bash"
+    - "-c"
+    - "< /dev/tcp/zookeeper-1/2181 && /opt/bitnami/kafka/bin/kafka-configs.sh --zookeeper zookeeper-1:2181 --alter --add-config 'SCRAM-SHA-256=[password=adminadmin]' --entity-type users --entity-name admin && /opt/bitnami/kafka/bin/kafka-configs.sh --zookeeper zookeeper-1:2181 --alter --add-config 'SCRAM-SHA-256=[password=clientclient]' --entity-type users --entity-name client"
+    depends_on:
+    - zookeeper-1
+    volumes:
+    - ./security/auth/kafka_jaas.conf:/opt/bitnami/kafka/conf/kafka_jaas.conf
+    environment:
+      KAFKA_OPTS: "-Djava.security.auth.login.config=/opt/bitnami/kafka/conf/kafka_jaas.conf"
+
+  broker-1:
+    image: bitnami/kafka:2.8.0
+    hostname: broker-1
+    container_name: broker-1
+    depends_on:
+    - zookeeper-1
+    - zookeeper-2
+    - zookeeper-3
+    - kafka-users
+    volumes:
+    - ./security/keystore/broker-1.jks:/bitnami/kafka/config/certs/kafka.keystore.jks
+    - ./security/truststore/broker-1.jks:/bitnami/kafka/config/certs/kafka.truststore.jks
+    - ./security/auth/kafka_jaas.conf:/opt/bitnami/kafka/conf/kafka_jaas.conf
+    environment:
+      ALLOW_PLAINTEXT_LISTENER: yes
+      KAFKA_BROKER_ID: 1
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
+      KAFKA_CFG_LISTENERS: SASL_SSL://0.0.0.0:9091
+      KAFKA_CFG_ADVERTISED_LISTENERS: SASL_SSL://broker-1:9091
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CFG_SUPER_USER: User:admin
+      KAFKA_CFG_ALLOW_EVERYONE_IF_NO_ACL_FOUND: true
+      KAFKA_CFG_SSL_CLIENT_AUTH: required
+      KAFKA_CFG_SSL_KEYSTORE_LOCATION: /bitnami/kafka/config/certs/kafka.keystore.jks
+      KAFKA_CFG_SSL_KEYSTORE_PASSWORD: password
+      KAFKA_CFG_SSL_TRUSTSTORE_LOCATION: /bitnami/kafka/config/certs/kafka.truststore.jks
+      KAFKA_CFG_SSL_TRUSTSTORE_PASSWORD: password
+      KAFKA_CFG_SSL_KEY_PASSWORD: password
+      KAFKA_OPTS: "-Djava.security.auth.login.config=/opt/bitnami/kafka/conf/kafka_jaas.conf"
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: true
+      KAFKA_CFG_SASL_ENABLED_MECHANISMS: SCRAM-SHA-256,SCRAM-SHA-512
+      KAFKA_CFG_SASL_MECHANISM_INTER_BROKER_PROTOCOL: SCRAM-SHA-256
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: SASL_SSL
+
+  broker-2:
+    image: bitnami/kafka:2.8.0
+    hostname: broker-2
+    container_name: broker-2
+    depends_on:
+    - zookeeper-1
+    - zookeeper-2
+    - zookeeper-3
+    - kafka-users
+    volumes:
+    - ./security/keystore/broker-2.jks:/bitnami/kafka/config/certs/kafka.keystore.jks
+    - ./security/truststore/broker-2.jks:/bitnami/kafka/config/certs/kafka.truststore.jks
+    - ./security/auth/kafka_jaas.conf:/opt/bitnami/kafka/conf/kafka_jaas.conf
+    environment:
+      ALLOW_PLAINTEXT_LISTENER: yes
+      KAFKA_BROKER_ID: 2
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
+      KAFKA_CFG_LISTENERS: SASL_SSL://0.0.0.0:9091
+      KAFKA_CFG_ADVERTISED_LISTENERS: SASL_SSL://broker-2:9091
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CFG_SUPER_USER: User:admin
+      KAFKA_CFG_ALLOW_EVERYONE_IF_NO_ACL_FOUND: true
+      KAFKA_CFG_SSL_CLIENT_AUTH: required
+      KAFKA_CFG_SSL_KEYSTORE_LOCATION: /bitnami/kafka/config/certs/kafka.keystore.jks
+      KAFKA_CFG_SSL_KEYSTORE_PASSWORD: password
+      KAFKA_CFG_SSL_TRUSTSTORE_LOCATION: /bitnami/kafka/config/certs/kafka.truststore.jks
+      KAFKA_CFG_SSL_TRUSTSTORE_PASSWORD: password
+      KAFKA_CFG_SSL_KEY_PASSWORD: password
+      KAFKA_OPTS: "-Djava.security.auth.login.config=/opt/bitnami/kafka/conf/kafka_jaas.conf"
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: true
+      KAFKA_CFG_SASL_ENABLED_MECHANISMS: SCRAM-SHA-256,SCRAM-SHA-512
+      KAFKA_CFG_SASL_MECHANISM_INTER_BROKER_PROTOCOL: SCRAM-SHA-256
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: SASL_SSL
+
+  broker-3:
+    image: bitnami/kafka:2.8.0
+    hostname: broker-3
+    container_name: broker-3
+    depends_on:
+    - zookeeper-1
+    - zookeeper-2
+    - zookeeper-3
+    - kafka-users
+    volumes:
+    - ./security/keystore/broker-3.jks:/bitnami/kafka/config/certs/kafka.keystore.jks
+    - ./security/truststore/broker-3.jks:/bitnami/kafka/config/certs/kafka.truststore.jks
+    - ./security/auth/kafka_jaas.conf:/opt/bitnami/kafka/conf/kafka_jaas.conf
+    environment:
+      ALLOW_PLAINTEXT_LISTENER: yes
+      KAFKA_BROKER_ID: 3
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
+      KAFKA_CFG_LISTENERS: SASL_SSL://0.0.0.0:9091
+      KAFKA_CFG_ADVERTISED_LISTENERS: SASL_SSL://broker-3:9091
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_CFG_SUPER_USER: User:admin
+      KAFKA_CFG_ALLOW_EVERYONE_IF_NO_ACL_FOUND: true
+      KAFKA_CFG_NUM_PARTITIONS: 6
+      KAFKA_CFG_SSL_CLIENT_AUTH: required
+      KAFKA_CFG_SSL_KEYSTORE_LOCATION: /bitnami/kafka/config/certs/kafka.keystore.jks
+      KAFKA_CFG_SSL_KEYSTORE_PASSWORD: password
+      KAFKA_CFG_SSL_TRUSTSTORE_LOCATION: /bitnami/kafka/config/certs/kafka.truststore.jks
+      KAFKA_CFG_SSL_TRUSTSTORE_PASSWORD: password
+      KAFKA_CFG_SSL_KEY_PASSWORD: password
+      KAFKA_OPTS: "-Djava.security.auth.login.config=/opt/bitnami/kafka/conf/kafka_jaas.conf"
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: true
+      KAFKA_CFG_SASL_ENABLED_MECHANISMS: SCRAM-SHA-256,SCRAM-SHA-512
+      KAFKA_CFG_SASL_MECHANISM_INTER_BROKER_PROTOCOL: SCRAM-SHA-256
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: SASL_SSL
+
+  kafka-producer:
+    image: bitnami/kafka:2.8.0
+    container_name: kafka-producer
+    restart: "on-failure"
+    depends_on:
+    - zookeeper-1
+    - zookeeper-2
+    - zookeeper-3
+    - kafka-users
+    - broker-1
+    - broker-2
+    - broker-3
+    volumes:
+    - ./security/keystore/client.jks:/tmp/client.keystore.jks
+    - ./security/config/client.properties:/tmp/client.properties
+    - ./security/truststore/client.jks:/tmp/client.truststore.jks
+    entrypoint:
+    - "/bin/bash"
+    - "-c"
+    - "< /dev/tcp/broker-1/9091 && (while true; do echo \"$(date '+%s'):Testing message $(date '+%s')\" >> /tmp/producer.log && sleep 1; done &) && touch /tmp/producer.log && tail -f /tmp/producer.log | /opt/bitnami/kafka/bin/kafka-console-producer.sh --topic test --bootstrap-server broker-1:9091,broker-2:9091,broker-3:9091 --property parse.key=e --property key.separator=':' --producer.config /tmp/client.properties"
+
+  kafka-consumer:
+    image: bitnami/kafka:2.8.0
+    container_name: kafka-consumer
+    restart: "on-failure"
+    depends_on:
+    - zookeeper-1
+    - zookeeper-2
+    - zookeeper-3
+    - kafka-users
+    - broker-1
+    - broker-2
+    - broker-3
+    volumes:
+    - ./security/keystore/client.jks:/tmp/client.keystore.jks
+    - ./security/config/client.properties:/tmp/client.properties
+    - ./security/truststore/client.jks:/tmp/client.truststore.jks
+    entrypoint:
+    - "/bin/bash"
+    - "-c"    
+    - "< /dev/tcp/broker-1/9091 && /opt/bitnami/kafka/bin/kafka-console-consumer.sh --topic test --bootstrap-server broker-1:9091,broker-2:9091,broker-3:9091 --property parse.key=true --property key.separator=':' --consumer.config /tmp/client.properties"
+   

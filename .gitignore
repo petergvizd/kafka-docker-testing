@@ -1,0 +1,9 @@
+security/truststore/*
+security/keystore/*
+*.crt
+*.key
+*.ext
+*.csr
+*.srl
+*.jks
+*.p12
