@@ -7,3 +7,8 @@ security/keystore/*
 *.srl
 *.jks
 *.p12
+kubernetes/kafka-docker/client-store-password-secret.yaml
+kubernetes/kafka-docker/client-store-secret.yaml
+kubernetes/kafka-docker/intermediate-certificate-secret.yaml
+kubernetes/kafka-docker/user-operator-deployment.yaml
+kubernetes/kafka-k8s/kafka-ca-secret.yaml

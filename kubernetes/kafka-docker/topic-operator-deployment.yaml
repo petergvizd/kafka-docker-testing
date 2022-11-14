@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docker-kafka-topic-operator
+  namespace: kafka-docker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: docker-kafka-topic-operator
+      strimzi.io/kind: topic-operator
+  template:
+    metadata:
+      labels:
+        name: docker-kafka-topic-operator
+        strimzi.io/kind: topic-operator
+    spec:
+      containers:
+      - args:
+        - /opt/strimzi/bin/topic_operator_run.sh
+        env:
+        - name: STRIMZI_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: STRIMZI_OPERATOR_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: STRIMZI_LEADER_ELECTION_ENABLED
+          value: "true"
+        - name: STRIMZI_LEADER_ELECTION_LEASE_NAME
+          value: docker-kafka-topic-operator
+        - name: STRIMZI_LEADER_ELECTION_LEASE_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: STRIMZI_LEADER_ELECTION_IDENTITY
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: STRIMZI_KAFKA_BOOTSTRAP_SERVERS
+          value: broker-1:9091,broker-2:9091,broker-3:9091
+        - name: STRIMZI_RESOURCE_LABELS
+          value: "strimzi.io/cluster=kafka-docker"
+        - name: STRIMZI_ZOOKEEPER_CONNECT
+          value: zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
+        - name: STRIMZI_ZOOKEEPER_SESSION_TIMEOUT_MS
+          value: "18000"
+        - name: STRIMZI_FULL_RECONCILIATION_INTERVAL_MS
+          value: "120000"
+        - name: STRIMZI_TOPIC_METADATA_MAX_ATTEMPTS
+          value: "6"
+        - name: STRIMZI_LOG_LEVEL
+          value: INFO
+        - name: STRIMZI_PUBLIC_CA
+          value: "true"
+        - name: STRIMZI_TLS_ENABLED
+          value: "true"
+        - name: STRIMZI_TLS_AUTH_ENABLED
+          value: "false"
+        - name: STRIMZI_SASL_ENABLED
+          value: "true"
+        - name: STRIMZI_SASL_USERNAME
+          value: "admin"
+        - name: STRIMZI_SASL_PASSWORD
+          value: "adminadmin"          
+        - name: STRIMZI_SASL_MECHANISM
+          value: "scram-sha-512"
+        - name: STRIMZI_SECURITY_PROTOCOL
+          value: "SASL_SSL"
+        - name: STRIMZI_TRUSTSTORE_LOCATION
+          value: "/opt/strimzi/client-stores/client.truststore.p12"
+        - name: STRIMZI_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: client-store-password
+              key: password
+              optional: false
+        - name: STRIMZI_KEYSTORE_LOCATION
+          value: "/opt/strimzi/client-stores/client.keystore.p12"
+        - name: STRIMZI_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: client-store-password
+              key: password
+              optional: false
+        image: quay.io/strimzi/operator:0.27.1
+        name: strimzi-topic-operator
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: "1"
+            memory: 384Mi
+          requests:
+            cpu: 200m
+            memory: 384Mi
+        volumeMounts:
+        - name: client-stores
+          mountPath: /opt/strimzi/client-stores
+      serviceAccount: strimzi-entity-operator
+      volumes:
+        - name: client-stores
+          secret:
+            secretName: client-stores

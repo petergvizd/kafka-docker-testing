@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docker-kafka-user-operator
+  namespace: kafka-docker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: docker-kafka-user-operator
+      strimzi.io/kind: topic-operator
+  template:
+    metadata:
+      labels:
+        name: docker-kafka-user-operator
+        strimzi.io/kind: topic-operator
+    spec:
+      containers:
+      - args:
+        - /opt/strimzi/bin/user_operator_run.sh
+        env:
+        - name: STRIMZI_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: STRIMZI_KAFKA_BOOTSTRAP_SERVERS
+          value: broker-1:9091,broker-2:9091,broker-3:9091
+        - name: STRIMZI_LABELS
+          value: "strimzi.io/cluster=kafka-docker"
+        - name: STRIMZI_ZOOKEEPER_CONNECT
+          value: zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181
+        - name: STRIMZI_FULL_RECONCILIATION_INTERVAL_MS
+          value: "120000"
+        - name: STRIMZI_CA_CERT_NAME
+          value: intermediate-certificate
+        - name: STRIMZI_CA_KEY_NAME
+          value: intermediate-certificate
+        - name: STRIMZI_ACLS_ADMIN_API_SUPPORTED
+          value: "true"
+        - name: STRIMZI_KAFKA_ADMIN_CLIENT_CONFIGURATION
+          value: |
+            default.api.timeout.ms=120000
+            request.timeout.ms=60000
+            ssl.enabled.protocols = TLSv1.2,TLSv1.1,TLSv1
+            ssl.truststore.location = /opt/strimzi/client-stores/client.truststore.p12
+            ssl.truststore.password = $STORE_PASSWORD
+            ssl.truststore.type = PKCS12
+            ssl.keystore.location = /opt/strimzi/client-stores/client.keystore.p12
+            ssl.keystore.password = $STORE_PASSWORD
+            ssl.keystore.type = PKCS12
+            ssl.key.password = $STORE_PASSWORD
+
+            security.protocol = SASL_SSL
+            sasl.mechanism = SCRAM-SHA-512
+            sasl.jaas.config = org.apache.kafka.common.security.scram.ScramLoginModule required username="admin" password="adminadmin";
+        image: quay.io/strimzi/operator:0.30.0
+        name: strimzi-topic-operator
+        ports:
+        - containerPort: 8081
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ready
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: "1"
+          requests:
+            cpu: 200m
+            memory: 256Mi
+        volumeMounts:
+        - name: client-stores
+          mountPath: /opt/strimzi/client-stores
+      serviceAccount: strimzi-entity-operator
+      volumes:
+        - name: client-stores
+          secret:
+            secretName: client-stores

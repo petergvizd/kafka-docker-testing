@@ -1,0 +1,85 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: kafka-k8s
+  namespace: kafka-k8s
+spec:
+  entityOperator:
+    topicOperator:
+      logging:
+        type: inline        
+    userOperator:
+      logging:
+        type: inline        
+  kafka:
+    version: 2.8.0
+    replicas: 3
+    config:
+      default.replication.factor: 3
+      offsets.topic.replication.factor: 3
+      num.network.threads: 3
+      num.io.threads: 8
+      num.partitions: 1
+      allow.everyone.if.no.acl.found: false
+      auto.create.topics.enable: false
+      min.insync.replicas: 2
+      inter.broker.protocol.version: 2.8.0
+    listeners:
+      - name: saslssl
+        port: 9092
+        type: nodeport
+        tls: true
+        authentication:
+          type: scram-sha-512
+        configuration:
+          ipFamilyPolicy: SingleStack
+          ipFamilies:
+          - IPv4
+          brokers:
+          - broker: 0
+            advertisedHost: kafka-control-plane
+          - broker: 1
+            advertisedHost: kafka-control-plane
+          - broker: 2
+            advertisedHost: kafka-control-plane
+          bootstrap:
+            nodePort: 30092
+            alternativeNames: 
+            - kafka-control-plane
+    storage:
+      class: standard
+      deleteClaim: true
+      type: persistent-claim
+      size: 1Gi
+    authorization:
+      type: simple
+      superUsers: 
+      - User:admin
+    resources:
+      limits:
+        cpu: "2"
+        memory: 1Gi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+    metricsConfig:
+      type: jmxPrometheusExporter
+      valueFrom:
+        configMapKeyRef:
+          key: kafka.yaml
+          name: jmx-exporter
+    logging:
+      type: inline
+  zookeeper:
+    replicas: 3
+    logging:
+      type: inline
+    storage:
+      class: standard
+      deleteClaim: true
+      type: persistent-claim
+      size: 1Gi      
+  clusterCa:
+    generateCertificateAuthority: false
+  clientsCa:
+    generateCertificateAuthority: false
