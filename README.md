@@ -91,6 +91,7 @@ After this setup you should be able to successfully start `kafka-docker-producer
 ### Running kafka in k8s
 For spinning up kafka cluster in kind k8s there should be already running strimzi-cluster-operator in namespace `kafka-k8s`,
 and other necessary objects are located in `kubernetes/kafka-k8s`:
+* `jmx-exporter-configmap` - configuration for exporting kafka metrics
 * `kafka-ca-secret` - custom CA authority for kafka cluster https://strimzi.io/docs/operators/latest/configuring.html#installing-your-own-ca-certificates-str
 * `kafka` - definition for kafka cluster
   * version 2.8.0
