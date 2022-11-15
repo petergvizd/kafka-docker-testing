@@ -1,3 +1,4 @@
+.idea/
 security/truststore/*
 security/keystore/*
 *.crt
