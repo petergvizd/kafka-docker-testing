@@ -55,7 +55,7 @@ spec:
             sasl.mechanism = SCRAM-SHA-512
             sasl.jaas.config = org.apache.kafka.common.security.scram.ScramLoginModule required username="admin" password="adminadmin";
         image: quay.io/strimzi/operator:0.30.0
-        name: strimzi-topic-operator
+        name: strimzi-user-operator
         ports:
         - containerPort: 8081
           name: http

@@ -25,6 +25,12 @@ spec:
       min.insync.replicas: 2
       inter.broker.protocol.version: 2.8.0
     listeners:
+      - name: isaslssl
+        port: 9093
+        type: internal
+        tls: true
+        authentication:
+          type: scram-sha-512
       - name: saslssl
         port: 9092
         type: nodeport
@@ -67,7 +73,7 @@ spec:
     authorization:
       type: simple
       superUsers:
-      - User:admin
+      - admin
     resources:
       limits:
         cpu: "2"

@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: admin-user-password
+  namespace: kafka-docker
+type: Opaque
+stringData:
+  password: adminadmin
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  labels:
+    strimzi.io/cluster: kafka-docker
+  name: admin
+  namespace: kafka-docker
+spec:
+  authentication:
+    type: scram-sha-512
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: password
+          name: admin-user-password
+  authorization:
+    acls: []
+    type: simple

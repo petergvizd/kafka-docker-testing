@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: admin-user-password
+  namespace: kafka-k8s
+type: Opaque
+stringData:
+  password: adminadmin
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  labels:
+    strimzi.io/cluster: kafka-k8s
+  name: admin
+  namespace: kafka-k8s
+spec:
+  authentication:
+    type: scram-sha-512
+    password:
+      valueFrom:
+        secretKeyRef:
+          key: password
+          name: admin-user-password
+  authorization:
+    acls: []
+    type: simple

@@ -27,19 +27,19 @@ spec:
       - host: "*"
         operation: Read
         resource:
-          name: test
+          name: replication-test-2
           patternType: literal
           type: topic
       - host: "*"
         operation: Write
         resource:
-          name: test
+          name: replication-test-2
           patternType: literal
           type: topic
       - host: "*"
         operation: Describe
         resource:
-          name: test
+          name: replication-test-2
           patternType: literal
           type: topic
 
