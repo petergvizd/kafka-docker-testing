@@ -183,9 +183,9 @@ services:
       KAFKA_CFG_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
       KAFKA_CFG_INTER_BROKER_PROTOCOL_VERSION: 2.8.0
 
-  kafka-docker-producer:
+  kafka-docker-producer-2:
     image: bitnami/kafka:2.8.0
-    container_name: kafka-docker-producer
+    container_name: kafka-docker-producer-2
     networks:
     - kafka-docker
     restart: "on-failure"
@@ -207,11 +207,11 @@ services:
     entrypoint:
     - "/bin/bash"
     - "-c"
-    - "< /dev/tcp/broker-1/9091 && (while true; do echo \"Docker message $(date '+%s')\" >> /tmp/producer.log && sleep 1; done &) && touch /tmp/producer.log && tail -f /tmp/producer.log | /opt/bitnami/kafka/bin/kafka-console-producer.sh --topic replication-test-2 --bootstrap-server broker-1:9091,broker-2:9091,broker-3:9091 --producer.config /tmp/client.properties"
+    - "< /dev/tcp/broker-1/9091 && (while true; do echo \"Docker message 2 $(date '+%s')\" >> /tmp/producer.log && sleep 1; done &) && touch /tmp/producer.log && tail -f /tmp/producer.log | /opt/bitnami/kafka/bin/kafka-console-producer.sh --topic replication-test-2 --bootstrap-server broker-1:9091,broker-2:9091,broker-3:9091 --producer.config /tmp/admin.properties"
 
-  kafka-docker-consumer:
+  kafka-docker-consumer-2:
     image: bitnami/kafka:2.8.0
-    container_name: kafka-docker-consumer
+    container_name: kafka-docker-consumer-2
     networks:
     - kafka-docker
     restart: "on-failure"
@@ -233,11 +233,11 @@ services:
     entrypoint:
     - "/bin/bash"
     - "-c"
-    - "< /dev/tcp/broker-1/9091 && /opt/bitnami/kafka/bin/kafka-console-consumer.sh --topic replication-test-2 --bootstrap-server broker-1:9091,broker-2:9091,broker-3:9091 --consumer.config /tmp/client.properties --group test"
+    - "< /dev/tcp/broker-1/9091 && /opt/bitnami/kafka/bin/kafka-console-consumer.sh --topic replication-test-2 --bootstrap-server broker-1:9091,broker-2:9091,broker-3:9091 --consumer.config /tmp/admin.properties --group test"
 
-  kafka-k8s-producer:
+  kafka-k8s-producer-2:
     image: bitnami/kafka:2.8.0
-    container_name: kafka-k8s-producer
+    container_name: kafka-k8s-producer-2
     networks:
     - kafka-docker
     restart: "on-failure"
@@ -250,11 +250,11 @@ services:
     entrypoint:
     - "/bin/bash"
     - "-c"
-    - "< /dev/tcp/kafka-control-plane/30092 && (while true; do echo \"K8s message $(date '+%s')\" >> /tmp/producer.log && sleep 1; done &) && touch /tmp/producer.log && tail -f /tmp/producer.log | /opt/bitnami/kafka/bin/kafka-console-producer.sh --topic replication-test-2 --bootstrap-server kafka-control-plane:30092 --producer.config /tmp/client.properties"
+    - "< /dev/tcp/kafka-control-plane/30092 && (while true; do echo \"K8s message 2 $(date '+%s')\" >> /tmp/producer.log && sleep 1; done &) && touch /tmp/producer.log && tail -f /tmp/producer.log | /opt/bitnami/kafka/bin/kafka-console-producer.sh --topic replication-test-2 --bootstrap-server kafka-control-plane:30092 --producer.config /tmp/client.properties"
 
-  kafka-k8s-consumer:
+  kafka-k8s-consumer-2:
     image: bitnami/kafka:2.8.0
-    container_name: kafka-k8s-consumer
+    container_name: kafka-k8s-consumer-2
     networks:
     - kafka-docker
     restart: "on-failure"
@@ -268,6 +268,92 @@ services:
     - "/bin/bash"
     - "-c"
     - "< /dev/tcp/kafka-control-plane/30092 && /opt/bitnami/kafka/bin/kafka-console-consumer.sh --topic replication-test-2 --bootstrap-server kafka-control-plane:30092 --consumer.config /tmp/client.properties --group test"
+
+  kafka-docker-producer-3:
+    image: bitnami/kafka:2.8.0
+    container_name: kafka-docker-producer-3
+    networks:
+      - kafka-docker
+    restart: "on-failure"
+    depends_on:
+      - zookeeper-1
+      - zookeeper-2
+      - zookeeper-3
+      - broker-1
+      - broker-2
+      - broker-3
+    environment:
+      KAFKA_OPTS: "-Djava.security.auth.login.config=/opt/bitnami/kafka/conf/kafka_jaas.conf"
+    volumes:
+      - ./security/keystore/client.jks:/tmp/client.keystore.jks
+      - ./security/truststore/client.jks:/tmp/client.truststore.jks
+      - ./security/config/client.properties:/tmp/client.properties
+      - ./security/config/admin.properties:/tmp/admin.properties
+      - ./security/auth/kafka_jaas.conf:/opt/bitnami/kafka/conf/kafka_jaas.conf
+    entrypoint:
+      - "/bin/bash"
+      - "-c"
+      - "< /dev/tcp/broker-1/9091 && (while true; do echo \"Docker message 3 $(date '+%s')\" >> /tmp/producer.log && sleep 1; done &) && touch /tmp/producer.log && tail -f /tmp/producer.log | /opt/bitnami/kafka/bin/kafka-console-producer.sh --topic replication-test-3 --bootstrap-server broker-1:9091,broker-2:9091,broker-3:9091 --producer.config /tmp/admin.properties"
+
+  kafka-docker-consumer-3:
+    image: bitnami/kafka:2.8.0
+    container_name: kafka-docker-consumer-3
+    networks:
+      - kafka-docker
+    restart: "on-failure"
+    depends_on:
+      - zookeeper-1
+      - zookeeper-2
+      - zookeeper-3
+      - broker-1
+      - broker-2
+      - broker-3
+    environment:
+      KAFKA_OPTS: "-Djava.security.auth.login.config=/opt/bitnami/kafka/conf/kafka_jaas.conf"
+    volumes:
+      - ./security/keystore/client.jks:/tmp/client.keystore.jks
+      - ./security/truststore/client.jks:/tmp/client.truststore.jks
+      - ./security/config/client.properties:/tmp/client.properties
+      - ./security/config/admin.properties:/tmp/admin.properties
+      - ./security/auth/kafka_jaas.conf:/opt/bitnami/kafka/conf/kafka_jaas.conf
+    entrypoint:
+      - "/bin/bash"
+      - "-c"
+      - "< /dev/tcp/broker-1/9091 && /opt/bitnami/kafka/bin/kafka-console-consumer.sh --topic replication-test-3 --bootstrap-server broker-1:9091,broker-2:9091,broker-3:9091 --consumer.config /tmp/admin.properties --group test"
+
+  kafka-k8s-producer-3:
+    image: bitnami/kafka:2.8.0
+    container_name: kafka-k8s-producer-3
+    networks:
+      - kafka-docker
+    restart: "on-failure"
+    environment:
+      KAFKA_OPTS: "-Djava.security.auth.login.config=/opt/bitnami/kafka/conf/kafka_jaas.conf"
+    volumes:
+      - ./security/keystore/client.jks:/tmp/client.keystore.jks
+      - ./security/config/client.properties:/tmp/client.properties
+      - ./security/truststore/client.jks:/tmp/client.truststore.jks
+    entrypoint:
+      - "/bin/bash"
+      - "-c"
+      - "< /dev/tcp/kafka-control-plane/30092 && (while true; do echo \"K8s message 3 $(date '+%s')\" >> /tmp/producer.log && sleep 1; done &) && touch /tmp/producer.log && tail -f /tmp/producer.log | /opt/bitnami/kafka/bin/kafka-console-producer.sh --topic replication-test-3 --bootstrap-server kafka-control-plane:30092 --producer.config /tmp/client.properties"
+
+  kafka-k8s-consumer-3:
+    image: bitnami/kafka:2.8.0
+    container_name: kafka-k8s-consumer-3
+    networks:
+      - kafka-docker
+    restart: "on-failure"
+    environment:
+      KAFKA_OPTS: "-Djava.security.auth.login.config=/opt/bitnami/kafka/conf/kafka_jaas.conf"
+    volumes:
+      - ./security/keystore/client.jks:/tmp/client.keystore.jks
+      - ./security/config/client.properties:/tmp/client.properties
+      - ./security/truststore/client.jks:/tmp/client.truststore.jks
+    entrypoint:
+      - "/bin/bash"
+      - "-c"
+      - "< /dev/tcp/kafka-control-plane/30092 && /opt/bitnami/kafka/bin/kafka-console-consumer.sh --topic replication-test-3 --bootstrap-server kafka-control-plane:30092 --consumer.config /tmp/client.properties --group test"
 
 networks:
   kafka-docker:

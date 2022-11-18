@@ -3,21 +3,10 @@ kind: KafkaTopic
 metadata:
   labels:
     strimzi.io/cluster: kafka-docker
-  name: test
-  namespace: kafka-docker
-spec:
-  partitions: 3
-  replicas: 1
----
-apiVersion: kafka.strimzi.io/v1beta2
-kind: KafkaTopic
-metadata:
-  labels:
-    strimzi.io/cluster: kafka-docker
   name: replication-test-2
   namespace: kafka-docker
 spec:
-  partitions: 3
+  partitions: 1
   replicas: 2
 ---
 apiVersion: kafka.strimzi.io/v1beta2
@@ -28,5 +17,5 @@ metadata:
   name: replication-test-3
   namespace: kafka-docker
 spec:
-  partitions: 3
+  partitions: 1
   replicas: 3
