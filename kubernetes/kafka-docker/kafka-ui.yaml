@@ -1,0 +1,199 @@
+apiVersion: v1
+data:
+  global.yaml: |
+    micronaut:
+      security:
+        enabled: true
+
+    endpoints:
+      all:
+        port: 8079
+
+    akhq:
+      server:
+        access-log: # Access log configuration (optional)
+          enabled: false # true by default
+
+      # default kafka properties for each clients, available for admin / producer / consumer (optional)
+      clients-defaults:
+        consumer:
+          properties:
+            isolation.level: read_committed
+
+      pagination:
+        page-size: 50 # number of elements per page (default : 25)
+        threads: 16 # Number of parallel threads to resolve page
+
+      # Ui Global Options (optional)
+      ui-options:
+        topic:
+          default-view: ALL # default list view (ALL, HIDE_INTERNAL, HIDE_INTERNAL_STREAM, HIDE_STREAM). Overrides default
+          skip-consumer-groups: false # Skip loading consumer group information when showing topics. Overrides default
+          skip-last-record: false  # Skip loading last record date information when showing topics.  Overrides default
+        topic-data:
+          sort: NEWEST # default sort order (OLDEST, NEWEST) (default: OLDEST).  Overrides default
+
+      # Auth & Roles (optional)
+      security:
+        default-group: none # Default groups for all the user even unlogged user
+        # Groups definition
+        groups:
+          admin: # unique key
+            name: admin # Group name
+            roles:  # roles for the group
+              - topic/read
+              - topic/insert
+              - topic/delete
+              - topic/config/update
+              - node/read
+              - node/config/update
+              - topic/data/read
+              - topic/data/insert
+              - topic/data/delete
+              - group/read
+              - group/delete
+              - group/offsets/update
+              - registry/read
+              - registry/insert
+              - registry/update
+              - registry/delete
+              - registry/version/delete
+              - acls/read
+              - connect/read
+              - connect/insert
+              - connect/update
+              - connect/delete
+              - connect/state/update
+
+        basic-auth:
+          - username: admin # Username
+            password: "d82494f05d6917ba02f7aaa29689ccb444bb73f20380876cb05d1f37537b7892" # Password in sha256
+            groups: # Groups for the user
+              - admin
+  kafka.yaml: |
+    akhq:
+      # list of kafka cluster available for akhq
+      connections:
+        kafka-docker: # url friendly name for the cluster (letter, number, _, -, ... dot are not allowed here)
+          properties: # standard kafka properties (optional)
+            bootstrap.servers: "broker-1:9091,broker-2:9091,broker-3:9091"
+            security.protocol: "SASL_SSL"
+            ssl.enabled.protocols: "TLSv1.2,TLSv1.1,TLSv1"
+            ssl.truststore.password: "password"
+            ssl.truststore.location: "/client-stores/client.truststore.p12"
+            ssl.keystore.password: "password"        
+            ssl.keystore.location: "/client-stores/client.keystore.p12"
+            ssl.protocol: "TLS"
+            sasl.mechanism: "SCRAM-SHA-512"
+            sasl.jaas.config: "org.apache.kafka.common.security.scram.ScramLoginModule required username='admin' password='adminadmin';"
+
+        kafka-k8s: # url friendly name for the cluster (letter, number, _, -, ... dot are not allowed here)
+          properties: # standard kafka properties (optional)
+            bootstrap.servers: "kafka-k8s-kafka-bootstrap.kafka-k8s.svc:9093"
+            security.protocol: "SASL_SSL"
+            ssl.enabled.protocols: "TLSv1.2,TLSv1.1,TLSv1"
+            ssl.truststore.password: "password"
+            ssl.truststore.location: "/client-stores/client.truststore.p12"
+            ssl.keystore.password: "password"        
+            ssl.keystore.location: "/client-stores/client.keystore.p12"
+            ssl.protocol: "TLS"
+            sasl.mechanism: "SCRAM-SHA-512"
+            sasl.jaas.config: "org.apache.kafka.common.security.scram.ScramLoginModule required username='admin' password='adminadmin';"
+
+kind: ConfigMap
+metadata:
+  name: kafka-ui-akhq-config
+  namespace: kafka-docker
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: kafka-ui-akhq
+  name: kafka-ui-akhq
+  namespace: kafka-docker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-ui-akhq
+  template:
+    metadata:
+      labels:
+        app: kafka-ui-akhq
+    spec:
+      containers:
+        - env:
+            - name: MICRONAUT_CONFIG_FILES
+              value: /config-kafka/global.yaml,/config-kafka/kafka.yaml
+            - name: JAVA_OPTS
+              value: |
+                -XX:MaxRAMPercentage=60 -XX:MaxGCPauseMillis=100 -XX:+ExitOnOutOfMemoryError -XX:+UseG1GC -Dlogback.configurationFile=/config/logback.xml
+          image: tchiotludo/akhq:0.22.0
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            successThreshold: 1
+            tcpSocket:
+              port: management
+            timeoutSeconds: 5
+          name: kafka-ui-akhq
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+            - containerPort: 8079
+              name: management
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: management
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: "1"
+              memory: 600Mi
+            requests:
+              cpu: 50m
+              memory: 500Mi
+          volumeMounts:
+            - mountPath: /config-kafka
+              name: config-kafka
+            - name: client-stores
+              mountPath: /client-stores
+      volumes:
+        - name: client-stores
+          secret:
+            secretName: client-stores
+        - name: config-kafka
+          configMap:
+            name: kafka-ui-akhq-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: kafka-ui-akhq
+  name: kafka-ui-akhq
+  namespace: kafka-docker
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: http
+    - name: management
+      port: 8079
+      protocol: TCP
+      targetPort: management
+  selector:
+    app: kafka-ui-akhq
+  type: ClusterIP

@@ -112,7 +112,7 @@ spec:
           sync.group.offsets.enabled: true
           # Interval period to sync data offsets from source cluster
           sync.group.offsets.interval.seconds: 5
-          #emit.checkpoints.interval.seconds: 60
+          emit.checkpoints.interval.seconds: 5
           # Interval period to refresh consumer groups statuses (Default: 600)
           refresh.groups.interval.seconds: 60
       topicsPattern: ".*"
@@ -152,7 +152,7 @@ spec:
           sync.group.offsets.enabled: true
           # Interval period to sync data offsets from source cluster
           sync.group.offsets.interval.seconds: 5
-          #emit.checkpoints.interval.seconds: 60
+          emit.checkpoints.interval.seconds: 5
           # Interval period to refresh consumer groups statuses (Default: 600)
           refresh.groups.interval.seconds: 60
       topicsPattern: replication-test-3
